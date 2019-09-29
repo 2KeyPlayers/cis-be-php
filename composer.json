@@ -1,0 +1,7 @@
+{
+    "require": {
+        "slim/slim": "^4.2",
+        "slim/psr7": "^0.5.0",
+        "tuupola/slim-basic-auth": "^3.2"
+    }
+}
