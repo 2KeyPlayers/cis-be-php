@@ -14,8 +14,11 @@ CREATE TABLE kruzok (
   id SERIAL PRIMARY KEY,
   nazov TEXT NOT NULL,
   veduci INT REFERENCES uzivatel(id),
+  zadarmo BOOLEAN NOT NULL DEFAULT FALSE,
+  -- TODO: vytvoreny, upraveny, uzivatel
   UNIQUE (nazov)
 );
+-- ALTER TABLE kruzok ADD COLUMN zadarmo BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TYPE pohlavie AS ENUM ('M', 'Z');
 CREATE TABLE ucastnik (
@@ -28,6 +31,39 @@ CREATE TABLE ucastnik (
   mesto_obec TEXT NOT NULL,
   ulica_cislo TEXT NOT NULL,
   kruzky INT ARRAY,
+  -- TODO: vytvoreny, upraveny, uzivatel
   UNIQUE (cislo_roznodnutia),
   UNIQUE (meno, priezvisko, datum_narodenia)
 );
+
+CREATE TYPE platba AS (
+  suma MONEY,
+  datum DATE,
+  uzivatel INT
+);
+CREATE TABLE poplatky (
+  ucastnik INT NOT NULL,
+  kruzok INT NOT NULL,
+  poplatok MONEY NOT NULL DEFAULT 4,
+  stav CHAR(9) NOT NULL DEFAULT '---------',
+  platby platba ARRAY,
+  UNIQUE (ucastnik, kruzok)
+);
+-- insert poplatky for each ucastnik + kruzok
+DO
+$do$
+DECLARE
+  u RECORD;
+  k INT;
+BEGIN
+  FOR u IN SELECT id, kruzky
+    FROM ucastnik
+    ORDER BY id
+  LOOP
+    FOREACH k IN ARRAY u.kruzky
+    LOOP
+      INSERT INTO poplatky (ucastnik, kruzok) VALUES (u.id, k);
+    END LOOP;
+  END LOOP;
+END;
+$do$

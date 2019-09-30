@@ -121,7 +121,7 @@ $app->get('/api/veduci/{id}', function (Request $request, Response $response, ar
 
 $app->get('/api/kruzky', function (Request $request, Response $response, array $args) {
     $db = getDb();
-    $stmt = $db->prepare("SELECT * FROM kruzok ORDER BY nazov");
+    $stmt = $db->prepare("SELECT k.*, COUNT(u.*) pocetUcastnikov FROM kruzok k INNER JOIN ucastnik u ON k.id = ANY (u.kruzky) GROUP BY k.id ORDER BY nazov");
     $stmt->execute();
     $data = $stmt->fetchAll();
     
@@ -138,7 +138,7 @@ $app->get('/api/kruzok/{id}', function (Request $request, Response $response, ar
     $data = $stmt->fetch();
     
     if ($data) {
-        $stmt = $db->prepare("SELECT id, meno, priezvisko FROM ucastnik WHERE :id = ANY(kruzky) ORDER BY priezvisko, meno");
+        $stmt = $db->prepare("SELECT u.id, u.pohlavie, u.meno, u.priezvisko, p.poplatok, p.stav FROM ucastnik u INNER JOIN poplatky p ON (p.ucastnik = u.id AND p.kruzok = :id) WHERE :id = ANY(kruzky) ORDER BY priezvisko, meno");
         $stmt->execute(['id' => $id]);
         $ucastnici = $stmt->fetchAll();
         $data['ucastnici'] = $ucastnici;
@@ -215,8 +215,8 @@ $app->get('/api/ucastnik/{id}', function (Request $request, Response $response, 
     
     if ($data) {
         $idcka = substr($data['kruzky'], 1, strlen($data['kruzky']) - 2);
-        $stmt = $db->prepare("SELECT id, nazov FROM kruzok WHERE id IN (" . $idcka . ") ORDER BY nazov");
-        $stmt->execute();
+        $stmt = $db->prepare("SELECT k.id, k.nazov, p.poplatok, p.stav FROM kruzok k INNER JOIN poplatky p ON (p.ucastnik = :id AND p.kruzok = k.id) WHERE id IN (" . $idcka . ") ORDER BY nazov");
+        $stmt->execute(['id' => $id]);
         $kruzky = $stmt->fetchAll();
         $data['kruzky'] = $kruzky;
     }
