@@ -13,7 +13,7 @@ CREATE TABLE uzivatel (
 CREATE TABLE kruzok (
   id SERIAL PRIMARY KEY,
   nazov TEXT NOT NULL,
-  veduci INT REFERENCES uzivatel(id),
+  veduci INT NOT NULL REFERENCES uzivatel(id),
   zadarmo BOOLEAN NOT NULL DEFAULT FALSE,
   -- TODO: vytvoreny, upraveny, uzivatel
   UNIQUE (nazov)
@@ -28,8 +28,9 @@ CREATE TABLE ucastnik (
   meno TEXT NOT NULL,
   priezvisko TEXT NOT NULL,
   datum_narodenia DATE NOT NULL,
-  mesto_obec TEXT NOT NULL,
-  ulica_cislo TEXT NOT NULL,
+  mesto TEXT NOT NULL,
+  ulica TEXT,
+  cislo TEXT,
   kruzky INT ARRAY,
   -- TODO: vytvoreny, upraveny, uzivatel
   UNIQUE (cislo_roznodnutia),
@@ -42,8 +43,8 @@ CREATE TYPE platba AS (
   uzivatel INT
 );
 CREATE TABLE poplatky (
-  ucastnik INT NOT NULL,
-  kruzok INT NOT NULL,
+  ucastnik INT NOT NULL REFERENCES ucastnik(id),
+  kruzok INT NOT NULL REFERENCES kruzok(id),
   poplatok MONEY NOT NULL DEFAULT 4,
   stav CHAR(9) NOT NULL DEFAULT '---------',
   platby platba ARRAY,
