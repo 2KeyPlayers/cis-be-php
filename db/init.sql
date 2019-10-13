@@ -15,12 +15,20 @@ CREATE TABLE kruzok (
   nazov TEXT NOT NULL,
   veduci INT NOT NULL REFERENCES uzivatel(id),
   zadarmo BOOLEAN NOT NULL DEFAULT FALSE,
-  -- TODO: vytvoreny, upraveny, uzivatel
+  vytvoreny DATE NOT NULL DEFAULT CURRENT_DATE,
+  upraveny DATE,
+  uzivatel INT NOT NULL DEFAULT 1 REFERENCES uzivatel(id),
   UNIQUE (nazov)
 );
 -- ALTER TABLE kruzok ADD COLUMN zadarmo BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TYPE pohlavie AS ENUM ('M', 'Z');
+CREATE TYPE adresa AS (
+  mesto TEXT,
+  ulica TEXT,
+  cislo TEXT,
+  psc TEXT
+);
 CREATE TABLE ucastnik (
   id SERIAL PRIMARY KEY,
   cislo_roznodnutia INT NOT NULL,
@@ -28,14 +36,18 @@ CREATE TABLE ucastnik (
   meno TEXT NOT NULL,
   priezvisko TEXT NOT NULL,
   datum_narodenia DATE NOT NULL,
-  mesto TEXT NOT NULL,
-  ulica TEXT,
-  cislo TEXT,
+  adresa adresa NOT NULL,
   kruzky INT ARRAY,
-  -- TODO: vytvoreny, upraveny, uzivatel
+  vytvoreny DATE NOT NULL DEFAULT CURRENT_DATE,
+  upraveny DATE,
+  uzivatel INT NOT NULL DEFAUL 1 REFERENCES uzivatel(id),
   UNIQUE (cislo_roznodnutia),
   UNIQUE (meno, priezvisko, datum_narodenia)
 );
+-- ALTER TABLE ucastnik ADD COLUMN skola TEXT;
+-- ALTER TABLE ucastnik ADD COLUMN trieda TEXT;
+-- ALTER TABLE ucastnik ADD COLUMN zastupca TEXT;
+-- ALTER TABLE ucastnik ADD COLUMN telefon TEXT;
 
 CREATE TYPE platba AS (
   suma MONEY,
@@ -50,6 +62,7 @@ CREATE TABLE poplatky (
   platby platba ARRAY,
   UNIQUE (ucastnik, kruzok)
 );
+
 -- insert poplatky for each ucastnik + kruzok
 DO
 $do$
@@ -68,3 +81,5 @@ BEGIN
   END LOOP;
 END;
 $do$
+
+-- trigger after updates/deletes

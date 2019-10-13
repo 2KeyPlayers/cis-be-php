@@ -60,10 +60,24 @@ $app->get('/api/', function (Request $request, Response $response, $args) {
 
 $app->post('/api/prihlasenie', function (Request $request, Response $response, $args) {
     $data = getJson($request);
-    $prezyvka = $data->prezyvka;
-    $heslo = $data->heslo;
-    $token = base64_encode($prezyvka . ":" . $heslo);
-    return getResponse($response, ['token' => $token]);
+    $prezyvka = stripslashes($data->prezyvka);
+    $heslo = stripslashes($data->heslo);
+
+    $db = getDb();
+    $stmt = $db->prepare("SELECT * FROM uzivatel WHERE prezyvka = :prezyvka");
+    $stmt->execute(['prezyvka' => $prezyvka]);
+    $data = $stmt->fetch();
+
+    $db = null;
+    if ($data) {
+      if (password_verify($heslo, $data['heslo'])) {
+        $token = base64_encode($prezyvka . ":" . $heslo);
+        return getResponse($response, ['token' => $token]);
+      } else {
+        return getErrorResponse($response, ['message' => 'Incorrect password'], 403);
+      }
+    }
+    return getErrorResponse($response, ['message' => 'User not found'], 401);
 });
 
 $app->get('/api/heslo/{heslo}', function (Request $request, Response $response, $args) {
@@ -114,7 +128,10 @@ $app->get('/api/veduci/{id}', function (Request $request, Response $response, ar
     $data = $stmt->fetch();
     
     $db = null;
-    return getResponse($response, $data);
+    if ($data) {
+      return getResponse($response, $data);
+    }
+    return getErrorResponse($response, ['message' => 'Veduci not found'], 400);
 });
 
 /* Kruzky */
