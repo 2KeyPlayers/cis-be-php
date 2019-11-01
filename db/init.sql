@@ -31,7 +31,7 @@ CREATE TYPE adresa AS (
 );
 CREATE TABLE ucastnik (
   id SERIAL PRIMARY KEY,
-  cislo_roznodnutia INT NOT NULL,
+  cislo_rozhodnutia INT NOT NULL,
   pohlavie pohlavie NOT NULL,
   meno TEXT NOT NULL,
   priezvisko TEXT NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE ucastnik (
   vytvoreny DATE NOT NULL DEFAULT CURRENT_DATE,
   upraveny DATE,
   uzivatel INT NOT NULL DEFAUL 1 REFERENCES uzivatel(id),
-  UNIQUE (cislo_roznodnutia),
+  UNIQUE (cislo_rozhodnutia),
   UNIQUE (meno, priezvisko, datum_narodenia)
 );
 -- ALTER TABLE ucastnik ADD COLUMN skola TEXT;

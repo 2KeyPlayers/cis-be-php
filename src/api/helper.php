@@ -14,6 +14,14 @@ function getDb() {
   return $pdo;
 }
 
+function postgresToPhpArray($postgresArray) {
+  return explode(",", trim($postgresArray, "{}"));
+}
+  
+function phpToPostgresArray($phpArray) {
+  return "{".join(",", $phpArray)."}";
+}
+
 function getJson($request) {
   return json_decode($request->getBody());
 }
@@ -26,10 +34,17 @@ function getResponse($response, $data = NULL, $status = NULL) {
   }
   if ($status) {
     return $response
+        // ->withHeader('Access-Control-Allow-Origin', '*')
+        // ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+        // ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
         ->withHeader('Content-Type', 'application/json; charset=utf-8')
         ->withStatus($status);
   } else {
-    return $response->withHeader('Content-Type', 'application/json; charset=utf-8');
+    return $response
+        // ->withHeader('Access-Control-Allow-Origin', '*')
+        // ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+        // ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+        ->withHeader('Content-Type', 'application/json; charset=utf-8');
   }
 }
 

@@ -3,6 +3,7 @@
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Factory\AppFactory;
+use Slim\Exception\HttpNotFoundException;
 // use Slim\Extras\Middleware\HttpBasicAuth;
 use Tuupola\Middleware\HttpBasicAuthentication as HttpBasicAuthentication;
 use Tuupola\Middleware\HttpBasicAuthentication\PdoAuthenticator as PdoAuthenticator;
@@ -54,6 +55,18 @@ $container['db'] = function ($c) {
     return $pdo;
 };*/
 
+$app->options('/{routes:.+}', function ($request, $response, $args) {
+    return $response;
+});
+
+$app->add(function ($request, $handler) {
+    $response = $handler->handle($request);
+    return $response
+            ->withHeader('Access-Control-Allow-Origin', '*')
+            ->withHeader('Access-Control-Allow-Headers', 'X-Powered-By, X-Requested-With, Content-Type, Accept, Origin, Authorization')
+            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+});
+
 $app->get('/api/', function (Request $request, Response $response, $args) {
     return getResponse($response, "API pre CVrČkov Informačný Systém!");
 });
@@ -71,8 +84,12 @@ $app->post('/api/prihlasenie', function (Request $request, Response $response, $
     $db = null;
     if ($data) {
       if (password_verify($heslo, $data['heslo'])) {
+        // remove heslo
+        unset($data['heslo']);
+        // add token
         $token = base64_encode($prezyvka . ":" . $heslo);
-        return getResponse($response, ['token' => $token]);
+        $data['token'] = $token;
+        return getResponse($response, $data);
       } else {
         return getErrorResponse($response, ['message' => 'Incorrect password'], 403);
       }
@@ -138,7 +155,7 @@ $app->get('/api/veduci/{id}', function (Request $request, Response $response, ar
 
 $app->get('/api/kruzky', function (Request $request, Response $response, array $args) {
     $db = getDb();
-    $stmt = $db->prepare("SELECT k.*, COUNT(u.*) pocetUcastnikov FROM kruzok k INNER JOIN ucastnik u ON k.id = ANY (u.kruzky) GROUP BY k.id ORDER BY nazov");
+    $stmt = $db->prepare("SELECT k.*, v.meno menoVeduceho, v.priezvisko priezviskoVeduceho, COUNT(u.*) pocetUcastnikov FROM kruzok k INNER JOIN uzivatel v ON k.veduci = v.id INNER JOIN ucastnik u ON k.id = ANY (u.kruzky) GROUP BY k.id, v.meno, v.priezvisko ORDER BY nazov");
     $stmt->execute();
     $data = $stmt->fetchAll();
     
@@ -214,10 +231,18 @@ $app->patch('/api/kruzok/{id}', function (Request $request, Response $response, 
 
 $app->get('/api/ucastnici', function (Request $request, Response $response, array $args) {
     $db = getDb();
-    $stmt = $db->prepare("SELECT * FROM ucastnik ORDER BY priezvisko, meno, datum_narodenia");
+    $stmt = $db->prepare("SELECT * FROM ucastnik ORDER BY cislo_rozhodnutia");
     $stmt->execute();
     $data = $stmt->fetchAll();
     
+    if ($data) {
+        // in order to be able to directly modify array elements within the loop precede value with &,
+        // in that case the value will be assigned by reference
+        foreach ($data as &$row) {
+            $row['kruzky'] = postgresToPhpArray($row['kruzky']);
+        }
+    }
+
     $db = null;
     return getResponse($response, $data);
 });
@@ -240,6 +265,10 @@ $app->get('/api/ucastnik/{id}', function (Request $request, Response $response, 
     
     $db = null;
     return getResponse($response, $data);
+});
+
+$app->map(['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], '/{routes:.+}', function ($request, $response) {
+    throw new HttpNotFoundException($request);
 });
 
 $app->run();
