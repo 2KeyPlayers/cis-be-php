@@ -128,7 +128,7 @@ $app->post('/api/uzivatel', function (Request $request, Response $response, arra
 
 $app->get('/api/veduci', function (Request $request, Response $response, array $args) {
     $db = getDb();
-    $stmt = $db->prepare("SELECT * FROM uzivatel WHERE veduci = TRUE ORDER BY meno, priezvisko");
+    $stmt = $db->prepare("SELECT id, meno, priezvisko, titul FROM uzivatel WHERE veduci = TRUE ORDER BY id");
     $stmt->execute();
     $data = $stmt->fetchAll();
     
@@ -155,7 +155,7 @@ $app->get('/api/veduci/{id}', function (Request $request, Response $response, ar
 
 $app->get('/api/kruzky', function (Request $request, Response $response, array $args) {
     $db = getDb();
-    $stmt = $db->prepare("SELECT k.*, v.meno menoVeduceho, v.priezvisko priezviskoVeduceho, COUNT(u.*) pocetUcastnikov FROM kruzok k INNER JOIN uzivatel v ON k.veduci = v.id INNER JOIN ucastnik u ON k.id = ANY (u.kruzky) GROUP BY k.id, v.meno, v.priezvisko ORDER BY nazov");
+    $stmt = $db->prepare("SELECT k.*, v.id idveduceho, v.meno menoVeduceho, v.priezvisko priezviskoVeduceho, v.titul titulveduceho, COUNT(u.*) pocetUcastnikov FROM kruzok k INNER JOIN uzivatel v ON k.veduci = v.id INNER JOIN ucastnik u ON k.id = ANY (u.kruzky) GROUP BY k.id, v.id, v.meno, v.priezvisko, v.titul ORDER BY nazov");
     $stmt->execute();
     $data = $stmt->fetchAll();
     
@@ -231,7 +231,7 @@ $app->patch('/api/kruzok/{id}', function (Request $request, Response $response, 
 
 $app->get('/api/ucastnici', function (Request $request, Response $response, array $args) {
     $db = getDb();
-    $stmt = $db->prepare("SELECT * FROM ucastnik ORDER BY cislo_rozhodnutia");
+    $stmt = $db->prepare("SELECT *, (adresa).* FROM ucastnik ORDER BY cislo_rozhodnutia");
     $stmt->execute();
     $data = $stmt->fetchAll();
     
@@ -239,6 +239,7 @@ $app->get('/api/ucastnici', function (Request $request, Response $response, arra
         // in order to be able to directly modify array elements within the loop precede value with &,
         // in that case the value will be assigned by reference
         foreach ($data as &$row) {
+            unset($row['adresa']);
             $row['kruzky'] = postgresToPhpArray($row['kruzky']);
         }
     }
