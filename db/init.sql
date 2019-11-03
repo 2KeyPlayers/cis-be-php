@@ -50,14 +50,14 @@ CREATE TABLE ucastnik (
 -- ALTER TABLE ucastnik ADD COLUMN telefon TEXT;
 
 CREATE TYPE platba AS (
-  suma MONEY,
+  suma NUMERIC(6, 2), -- MONEY,
   datum DATE,
   uzivatel INT
 );
 CREATE TABLE poplatky (
   ucastnik INT NOT NULL REFERENCES ucastnik(id),
   kruzok INT NOT NULL REFERENCES kruzok(id),
-  poplatok MONEY NOT NULL DEFAULT 4,
+  poplatok NUMERIC(6, 2) NOT NULL DEFAULT 4, -- MONEY
   stav CHAR(9) NOT NULL DEFAULT '---------',
   platby platba ARRAY,
   UNIQUE (ucastnik, kruzok)

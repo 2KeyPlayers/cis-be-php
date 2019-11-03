@@ -140,7 +140,7 @@ $app->get('/api/veduci/{id}', function (Request $request, Response $response, ar
     $id = $args['id'];
 
     $db = getDb();
-    $stmt = $db->prepare("SELECT * FROM uzivatel WHERE id=:id AND veduci = TRUE");
+    $stmt = $db->prepare("SELECT * FROM uzivatel WHERE id = :id AND veduci = TRUE");
     $stmt->execute(['id' => $id]); 
     $data = $stmt->fetch();
     
@@ -155,7 +155,7 @@ $app->get('/api/veduci/{id}', function (Request $request, Response $response, ar
 
 $app->get('/api/kruzky', function (Request $request, Response $response, array $args) {
     $db = getDb();
-    $stmt = $db->prepare("SELECT k.*, v.id idveduceho, v.meno menoVeduceho, v.priezvisko priezviskoVeduceho, v.titul titulveduceho, COUNT(u.*) pocetUcastnikov FROM kruzok k INNER JOIN uzivatel v ON k.veduci = v.id INNER JOIN ucastnik u ON k.id = ANY (u.kruzky) GROUP BY k.id, v.id, v.meno, v.priezvisko, v.titul ORDER BY nazov");
+    $stmt = $db->prepare("SELECT k.*, v.id idveduceho, v.meno menoVeduceho, v.priezvisko priezviskoVeduceho, v.titul titulveduceho, COUNT(u.*) pocetUcastnikov FROM kruzok k INNER JOIN uzivatel v ON k.veduci = v.id LEFT JOIN ucastnik u ON k.id = ANY (u.kruzky) GROUP BY k.id, v.id, v.meno, v.priezvisko, v.titul ORDER BY nazov");
     $stmt->execute();
     $data = $stmt->fetchAll();
     
@@ -167,7 +167,7 @@ $app->get('/api/kruzok/{id}', function (Request $request, Response $response, ar
     $id = $args['id'];
 
     $db = getDb();
-    $stmt = $db->prepare("SELECT * FROM kruzok WHERE id=:id");
+    $stmt = $db->prepare("SELECT * FROM kruzok WHERE id = :id");
     $stmt->execute(['id' => $id]);
     $data = $stmt->fetch();
     
@@ -182,47 +182,53 @@ $app->get('/api/kruzok/{id}', function (Request $request, Response $response, ar
     return getResponse($response, $data);
 });
 
+$app->post('/api/kruzok/skontroluj', function (Request $request, Response $response, array $args) {
+    $data = getJson($request);
+
+    $db = getDb();
+    if ($data->id) {
+        $stmt = $db->prepare("SELECT * FROM kruzok WHERE id != :id AND nazov = :nazov");
+        $stmt->execute(['id' => $data->id, 'nazov' => $data->nazov]);
+    } else {
+        $stmt = $db->prepare("SELECT * FROM kruzok WHERE nazov = :nazov");
+        $stmt->execute(['nazov' => $data->nazov]);
+    }
+    $data = $stmt->fetch();
+    
+    $db = null;
+    if ($data) {
+        return getResponse($response, ['nazovExistuje' => true]);
+    }    
+    return getResponse($response, ['nazovExistuje' => false]);
+});
+
 $app->post('/api/kruzok', function (Request $request, Response $response, array $args) {
     $data = getJson($request);
 
     $db = getDb();
-    $stmt = $db->prepare("INSERT INTO kruzok (nazov, veduci) VALUES (:nazov, :veduci)");
-    $result = $stmt->execute(['nazov' => $data->nazov, 'veduci' => $data->veduci]);
+    $stmt = $db->prepare("INSERT INTO kruzok (nazov, veduci, zadarmo, vytvoreny, uzivatel) VALUES (:nazov, :veduci, :zadarmo, CURRENT_DATE, :uzivatel)");
+    $result = $stmt->execute(['nazov' => $data->nazov, 'veduci' => $data->veduci, 'zadarmo' => ($data->zadarmo ? 't' : 'f'), 'uzivatel' => $data->uzivatel]);
     
     $db = null;
     if ($result) {
-        return getResponse($result);
+        return getResponse($response);
     }
     return getErrorResponse($response, ['message' => 'Failed to post Kruzok'], 500);
 });
 
 $app->patch('/api/kruzok/{id}', function (Request $request, Response $response, array $args) {
+    $id = $args['id'];
     $data = getJson($request);
     // $id = (int)$data->id['id'];
 
     $db = getDb();
-    $sql = "UPDATE kruzok SET ";
-    if ($data->nazov) {
-        $sql = $sql . "nazov = :nazov, ";
-    }
-    if ($data->veduci) {
-        $sql = $sql . "veduci = :veduci, ";
-    }
-    $sql = substr($sql, strlen($sql) - 2);
-    $sql = $sql . " WHERE id = :id";
+    $sql = "UPDATE kruzok SET nazov = :nazov, veduci = :veduci, zadarmo = :zadarmo, upraveny = CURRENT_DATE, uzivatel = :uzivatel WHERE id = :id";
     $stmt = $db->prepare($sql);
-    if ($data->nazov) {
-        $stmt->bindParam(':nazov', $data->nazov);
-    }
-    if ($data->veduci) {
-        $stmt->bindParam(':veduci', $data->veduci);
-    }
-    $stmt->bindParam(':id', $data->id); //, PDO::PARAM_INT);
-    $result = $stmt->execute();
+    $result = $stmt->execute(['nazov' => $data->nazov, 'veduci' => $data->veduci, 'zadarmo' => ($data->zadarmo ? 't' : 'f'), 'uzivatel' => $data->uzivatel, 'id' => $id]);
     
     $db = null;
     if ($result) {
-        return getResponse($result);
+        return getResponse($response);
     }
     return getErrorResponse($response, ['message' => 'Failed to patch Kruzok'], 500);
 });
@@ -252,11 +258,13 @@ $app->get('/api/ucastnik/{id}', function (Request $request, Response $response, 
     $id = $args['id'];
 
     $db = getDb();
-    $stmt = $db->prepare("SELECT * FROM ucastnik WHERE id=:id");
+    $stmt = $db->prepare("SELECT *, (adresa).* FROM ucastnik WHERE id = :id");
     $stmt->execute(['id' => $id]);
     $data = $stmt->fetch();
     
     if ($data) {
+        unset($data['adresa']);
+
         $idcka = substr($data['kruzky'], 1, strlen($data['kruzky']) - 2);
         $stmt = $db->prepare("SELECT k.id, k.nazov, p.poplatok, p.stav FROM kruzok k INNER JOIN poplatky p ON (p.ucastnik = :id AND p.kruzok = k.id) WHERE id IN (" . $idcka . ") ORDER BY nazov");
         $stmt->execute(['id' => $id]);
@@ -266,6 +274,76 @@ $app->get('/api/ucastnik/{id}', function (Request $request, Response $response, 
     
     $db = null;
     return getResponse($response, $data);
+});
+
+$app->post('/api/ucastnik/skontroluj', function (Request $request, Response $response, array $args) {
+    $data = getJson($request);
+
+    $db = getDb();
+    if ($data->id) {
+        $stmt = $db->prepare("SELECT * FROM ucastnik WHERE id != :id AND cislo_rozhodnutia = :cislo");
+        $stmt->execute(['id' => $data->id, 'cislo' => $data->cislo]);
+        $result = $stmt->fetch();
+        if ($result) {
+            $db = null;
+            return getResponse($response, ['cisloExistuje' => true]);
+        }
+        $stmt = $db->prepare("SELECT * FROM ucastnik WHERE id != :id AND meno = :meno AND priezvisko = :priezvisko");
+        $stmt->execute(['id' => $data->id, 'meno' => $data->meno, 'priezvisko' => $data->priezvisko]);
+        $result = $stmt->fetch();
+        if ($result) {
+            $db = null;
+            return getResponse($response, ['menoExistuje' => true]);
+        }
+    } else {
+        $stmt = $db->prepare("SELECT * FROM ucastnik WHERE cislo_rozhodnutia = :cislo");
+        $stmt->execute(['cislo' => $data->cislo]);
+        $result = $stmt->fetch();
+        if ($result) {
+            $db = null;
+            return getResponse($response, ['cisloExistuje' => true]);
+        }
+        $stmt = $db->prepare("SELECT * FROM ucastnik WHERE meno = :meno AND priezvisko = :priezvisko");
+        $stmt->execute(['meno' => $data->meno, 'priezvisko' => $data->priezvisko]);
+        $result = $stmt->fetch();
+        if ($result) {
+            $db = null;
+            return getResponse($response, ['menoExistuje' => true]);
+        }
+    }
+
+    return getResponse($response, ['cisloExistuje' => false, 'menoExistuje' => false]);
+});
+
+$app->post('/api/ucastnik', function (Request $request, Response $response, array $args) {
+    $data = getJson($request);
+
+    $db = getDb();
+    $stmt = $db->prepare("INSERT INTO ucastnik (cislo_rozhodnutia, pohlavie, meno, priezvisko, datum_narodenia, adresa.ulica, adresa.cislo, adresa.mesto, adresa.psc, vytvoreny, uzivatel) VALUES (:cislo, :pohlavie, :meno, :priezvisko, to_date(:datum, 'YYYY-MM-DD'), :ulica, :cislo, :mesto, :psc, CURRENT_DATE, :uzivatel)");
+    $result = $stmt->execute(['cislo_rozhodnutia' => $data->cisloRozhodnutia, 'pohlavie' => $data->pohlavie, 'meno' => $data->meno, 'priezvisko' => $data->priezvisko, 'datum' => $data.datumNarodenia, 'ulica' => $data->adresa->ulica, 'cislo' => $data->adresa->cislo, 'mesto' => $data->adresa->mesto, 'psc' => $data->adresa->psc, 'uzivatel' => $data->uzivatel]);
+    
+    $db = null;
+    if ($result) {
+        return getResponse($response);
+    }
+    return getErrorResponse($response, ['message' => 'Failed to post Ucastnik'], 500);
+});
+
+$app->patch('/api/ucastnik/{id}', function (Request $request, Response $response, array $args) {
+    $id = $args['id'];
+    $data = getJson($request);
+    // $id = (int)$data->id['id'];
+
+    $db = getDb();
+    $sql = "UPDATE ucastnik SET cislo_rozhodnutia = :cislo_rozhodnutia, pohlavie = :pohlavie, meno = :meno, priezvisko = :priezvisko, datum_narodenia = to_date(:datum, 'YYYY-MM-DD'), adresa.ulica = :ulica, adresa.cislo = :cislo, adresa.mesto = :mesto, adresa.psc = :psc, upraveny = CURRENT_DATE, uzivatel = :uzivatel WHERE id = :id";
+    $stmt = $db->prepare($sql);
+    $result = $stmt->execute(['cislo_rozhodnutia' => $data->cisloRozhodnutia, 'pohlavie' => $data->pohlavie, 'meno' => $data->meno, 'priezvisko' => $data->priezvisko, 'datum' => $data->datumNarodenia, 'ulica' => $data->adresa->ulica, 'cislo' => $data->adresa->cislo, 'mesto' => $data->adresa->mesto, 'psc' => $data->adresa->psc, 'uzivatel' => $data->uzivatel, 'id' => $id]);
+    
+    $db = null;
+    if ($result) {
+        return getResponse($response);
+    }
+    return getErrorResponse($response, ['message' => 'Failed to patch Ucastnik'], 500);
 });
 
 $app->map(['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], '/{routes:.+}', function ($request, $response) {
