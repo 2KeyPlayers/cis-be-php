@@ -17,7 +17,7 @@ CREATE TABLE kruzok (
   zadarmo BOOLEAN NOT NULL DEFAULT FALSE,
   vytvoreny DATE NOT NULL DEFAULT CURRENT_DATE,
   upraveny DATE,
-  uzivatel INT NOT NULL DEFAULT 1 REFERENCES uzivatel(id),
+  uzivatel INT NOT NULL REFERENCES uzivatel(id),
   UNIQUE (nazov)
 );
 -- ALTER TABLE kruzok ADD COLUMN zadarmo BOOLEAN NOT NULL DEFAULT FALSE;
@@ -40,7 +40,7 @@ CREATE TABLE ucastnik (
   kruzky INT ARRAY,
   vytvoreny DATE NOT NULL DEFAULT CURRENT_DATE,
   upraveny DATE,
-  uzivatel INT NOT NULL DEFAUL 1 REFERENCES uzivatel(id),
+  uzivatel INT NOT NULL REFERENCES uzivatel(id),
   UNIQUE (cislo_rozhodnutia),
   UNIQUE (meno, priezvisko, datum_narodenia)
 );
