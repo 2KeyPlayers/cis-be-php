@@ -15,7 +15,10 @@ function getDb() {
 }
 
 function postgresToPhpArray($postgresArray) {
-  return explode(",", trim($postgresArray, "{}"));
+  if ($postgresArray && $postgresArray != "{}") {
+    return explode(",", trim($postgresArray, "{}"));
+  }
+  return null;
 }
   
 function phpToPostgresArray($phpArray) {

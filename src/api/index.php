@@ -121,7 +121,7 @@ $app->post('/api/uzivatel', function (Request $request, Response $response, arra
     if ($result) {
         return getResponse($result);
     }
-    return getErrorResponse($response, ['message' => 'Failed to post Veduci'], 500);
+    return getErrorResponse($response, ['message' => 'Failed to post Veduci'], 400);
 });
 
 /* Veduci */
@@ -172,14 +172,17 @@ $app->get('/api/kruzok/{id}', function (Request $request, Response $response, ar
     $data = $stmt->fetch();
     
     if ($data) {
-        $stmt = $db->prepare("SELECT u.id, u.pohlavie, u.meno, u.priezvisko, p.poplatok, p.stav FROM ucastnik u INNER JOIN poplatky p ON (p.ucastnik = u.id AND p.kruzok = :id) WHERE :id = ANY(kruzky) ORDER BY priezvisko, meno");
+        $stmt = $db->prepare("SELECT u.id, u.pohlavie, u.meno, u.priezvisko, p.poplatok, p.stav FROM ucastnik u INNER JOIN poplatky p ON (p.ucastnik = u.id AND p.kruzok = :id) WHERE :id = ANY(u.kruzky) ORDER BY u.priezvisko, u.meno");
         $stmt->execute(['id' => $id]);
         $ucastnici = $stmt->fetchAll();
         $data['ucastnici'] = $ucastnici;
+
+        $db = null;
+        return getResponse($response, $data);
+    } else {
+        $db = null;
+        return getErrorResponse($response, ['message' => 'Kruzok not found'], 400);
     }
-    
-    $db = null;
-    return getResponse($response, $data);
 });
 
 $app->post('/api/kruzok/skontroluj', function (Request $request, Response $response, array $args) {
@@ -213,7 +216,7 @@ $app->post('/api/kruzok', function (Request $request, Response $response, array 
     if ($result) {
         return getResponse($response);
     }
-    return getErrorResponse($response, ['message' => 'Failed to post Kruzok'], 500);
+    return getErrorResponse($response, ['message' => 'Failed to post Kruzok'], 400);
 });
 
 $app->patch('/api/kruzok/{id}', function (Request $request, Response $response, array $args) {
@@ -230,7 +233,22 @@ $app->patch('/api/kruzok/{id}', function (Request $request, Response $response, 
     if ($result) {
         return getResponse($response);
     }
-    return getErrorResponse($response, ['message' => 'Failed to patch Kruzok'], 500);
+    return getErrorResponse($response, ['message' => 'Failed to patch Kruzok'], 400);
+});
+
+$app->delete('/api/kruzok/{id}', function (Request $request, Response $response, array $args) {
+    $id = $args['id'];
+
+    $db = getDb();
+    $sql = "DELETE FROM kruzok k WHERE k.id = :id AND NOT EXISTS (SELECT * FROM ucastnik u WHERE k.id = any (u.kruzky))";
+    $stmt = $db->prepare($sql);
+    $result = $stmt->execute(['id' => $id]);
+    
+    $db = null;
+    if ($result) {
+        return getResponse($response);
+    }
+    return getErrorResponse($response, ['message' => 'Failed to delete Kruzok'], 400);
 });
 
 /* Ucastnici */
@@ -265,15 +283,20 @@ $app->get('/api/ucastnik/{id}', function (Request $request, Response $response, 
     if ($data) {
         unset($data['adresa']);
 
-        $idcka = substr($data['kruzky'], 1, strlen($data['kruzky']) - 2);
-        $stmt = $db->prepare("SELECT k.id, k.nazov, p.poplatok, p.stav FROM kruzok k INNER JOIN poplatky p ON (p.ucastnik = :id AND p.kruzok = k.id) WHERE id IN (" . $idcka . ") ORDER BY nazov");
-        $stmt->execute(['id' => $id]);
-        $kruzky = $stmt->fetchAll();
-        $data['kruzky'] = $kruzky;
+        if ($data['kruzky'] && $data['kruzky'] != '{}') {
+            $idcka = substr($data['kruzky'], 1, strlen($data['kruzky']) - 2);
+            $stmt = $db->prepare("SELECT k.id, k.nazov, p.poplatok, p.stav FROM kruzok k INNER JOIN poplatky p ON (p.ucastnik = :id AND p.kruzok = k.id) WHERE id IN (" . $idcka . ") ORDER BY nazov");
+            $stmt->execute(['id' => $id]);
+            $kruzky = $stmt->fetchAll();
+            $data['kruzky'] = $kruzky;
+        }
+
+        $db = null;
+        return getResponse($response, $data);
+    } else {
+        $db = null;
+        return getErrorResponse($response, ['message' => 'Ucastnik not found'], 400);
     }
-    
-    $db = null;
-    return getResponse($response, $data);
 });
 
 $app->post('/api/ucastnik/skontroluj', function (Request $request, Response $response, array $args) {
@@ -319,14 +342,14 @@ $app->post('/api/ucastnik', function (Request $request, Response $response, arra
     $data = getJson($request);
 
     $db = getDb();
-    $stmt = $db->prepare("INSERT INTO ucastnik (cislo_rozhodnutia, pohlavie, meno, priezvisko, datum_narodenia, adresa.ulica, adresa.cislo, adresa.mesto, adresa.psc, vytvoreny, uzivatel) VALUES (:cislo, :pohlavie, :meno, :priezvisko, to_date(:datum, 'YYYY-MM-DD'), :ulica, :cislo, :mesto, :psc, CURRENT_DATE, :uzivatel)");
-    $result = $stmt->execute(['cislo_rozhodnutia' => $data->cisloRozhodnutia, 'pohlavie' => $data->pohlavie, 'meno' => $data->meno, 'priezvisko' => $data->priezvisko, 'datum' => $data.datumNarodenia, 'ulica' => $data->adresa->ulica, 'cislo' => $data->adresa->cislo, 'mesto' => $data->adresa->mesto, 'psc' => $data->adresa->psc, 'uzivatel' => $data->uzivatel]);
+    $stmt = $db->prepare("INSERT INTO ucastnik (cislo_rozhodnutia, pohlavie, meno, priezvisko, datum_narodenia, adresa.ulica, adresa.cislo, adresa.mesto, adresa.psc, vytvoreny, uzivatel) VALUES (:cislo_rozhodnutia, :pohlavie, :meno, :priezvisko, to_date(:datum, 'YYYY-MM-DD'), :ulica, :cislo, :mesto, :psc, CURRENT_DATE, :uzivatel)");
+    $result = $stmt->execute(['cislo_rozhodnutia' => $data->cisloRozhodnutia, 'pohlavie' => $data->pohlavie, 'meno' => $data->meno, 'priezvisko' => $data->priezvisko, 'datum' => $data->datumNarodenia, 'ulica' => $data->adresa->ulica, 'cislo' => $data->adresa->cislo, 'mesto' => $data->adresa->mesto, 'psc' => $data->adresa->psc, 'uzivatel' => $data->uzivatel]);
     
     $db = null;
     if ($result) {
         return getResponse($response);
     }
-    return getErrorResponse($response, ['message' => 'Failed to post Ucastnik'], 500);
+    return getErrorResponse($response, ['message' => 'Failed to post Ucastnik'], 400);
 });
 
 $app->patch('/api/ucastnik/{id}', function (Request $request, Response $response, array $args) {
@@ -343,7 +366,22 @@ $app->patch('/api/ucastnik/{id}', function (Request $request, Response $response
     if ($result) {
         return getResponse($response);
     }
-    return getErrorResponse($response, ['message' => 'Failed to patch Ucastnik'], 500);
+    return getErrorResponse($response, ['message' => 'Failed to patch Ucastnik'], 400);
+});
+
+$app->delete('/api/ucastnik/{id}', function (Request $request, Response $response, array $args) {
+    $id = $args['id'];
+
+    $db = getDb();
+    $sql = "DELETE FROM ucastnik u WHERE u.id = :id AND (u.kruzky IS NULL OR u.kruzky = '{}')";
+    $stmt = $db->prepare($sql);
+    $result = $stmt->execute(['id' => $id]);
+    
+    $db = null;
+    if ($result) {
+        return getResponse($response);
+    }
+    return getErrorResponse($response, ['message' => 'Failed to delete Ucastnik'], 400);
 });
 
 $app->map(['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], '/{routes:.+}', function ($request, $response) {

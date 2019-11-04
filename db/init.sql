@@ -83,3 +83,54 @@ END;
 $do$
 
 -- trigger after updates/deletes
+CREATE TABLE kruzok_log(
+  operacia CHAR(1) NOT NULL,
+  datum TIMESTAMP NOT NULL,
+  uzivatel INT REFERENCES uzivatel(id),
+  udaje JSON 
+);
+
+CREATE OR REPLACE FUNCTION process_kruzok_log() RETURNS TRIGGER as
+$$
+  BEGIN
+    IF (TG_OP = 'DELETE') THEN
+      INSERT INTO kruzok_log SELECT 'D', now(), null, json_build_object('id', OLD.id, 'nazov', OLD.nazov, 'veduci', OLD.veduci, 'zadarmo', OLD.zadarmo);
+      RETURN OLD;
+    ELSIF (TG_OP = 'UPDATE') THEN
+      INSERT INTO kruzok_log SELECT 'U', now(), NEW.uzivatel, json_build_object('id', OLD.id, 'nazov', OLD.nazov, 'veduci', OLD.veduci, 'zadarmo', OLD.zadarmo);
+      RETURN NEW;
+    END IF;
+    RETURN NULL; -- result is ignored since this is an AFTER trigger
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER kruzok_log
+AFTER UPDATE OR DELETE ON kruzok
+FOR EACH ROW EXECUTE PROCEDURE process_kruzok_log();
+
+-- trigger after updates/deletes
+CREATE TABLE ucastnik_log(
+  operacia CHAR(1) NOT NULL,
+  datum TIMESTAMP NOT NULL,
+  uzivatel INT REFERENCES uzivatel(id),
+  udaje JSON 
+);
+
+CREATE OR REPLACE FUNCTION process_ucastnik_log() RETURNS TRIGGER as
+$$
+  BEGIN
+    IF (TG_OP = 'DELETE') THEN
+      INSERT INTO ucastnik_log SELECT 'D', now(), null, json_build_object('id', OLD.id, 'cisloRozhodnutia', OLD.cislo_rozhodnutia, 'pohlavie', OLD.pohlavie, 'meno', OLD.meno, 'priezvisko', OLD.priezvisko, 'datumNarodenia', OLD.datum_narodenia, 'adresa', OLD.adresa);
+      RETURN OLD;
+    ELSIF (TG_OP = 'UPDATE') THEN
+      INSERT INTO ucastnik_log SELECT 'U', now(), NEW.uzivatel, json_build_object('id', OLD.id, 'cisloRozhodnutia', OLD.cislo_rozhodnutia, 'pohlavie', OLD.pohlavie, 'meno', OLD.meno, 'priezvisko', OLD.priezvisko, 'datumNarodenia', OLD.datum_narodenia, 'adresa', OLD.adresa);
+      RETURN NEW;
+    END IF;
+    RETURN NULL; -- result is ignored since this is an AFTER trigger
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ucastnik_log
+AFTER UPDATE OR DELETE ON ucastnik
+FOR EACH ROW EXECUTE PROCEDURE process_ucastnik_log();
+
