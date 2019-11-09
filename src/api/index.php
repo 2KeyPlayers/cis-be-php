@@ -272,6 +272,16 @@ $app->get('/api/ucastnici', function (Request $request, Response $response, arra
     return getResponse($response, $data);
 });
 
+$app->get('/api/ucastnik/cislo', function (Request $request, Response $response, array $args) {
+    $db = getDb();
+    $stmt = $db->prepare("SELECT MAX(cislo_rozhodnutia) + 1 AS cislo FROM ucastnik");
+    $stmt->execute();
+    $data = $stmt->fetch();
+
+    $db = null;
+    return getResponse($response, $data);
+});
+
 $app->get('/api/ucastnik/{id}', function (Request $request, Response $response, array $args) {
     $id = $args['id'];
 
