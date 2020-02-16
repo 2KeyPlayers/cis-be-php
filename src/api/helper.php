@@ -8,7 +8,8 @@ function getDb() {
   // $pdo = new PDO("pgsql:host=" . $settings['host'] . ";dbname=" . $settings['dbname'] . ";options='-c client_encoding=utf8'",
   //     $settings['user'], $settings['pass']);
   // $pdo = new PDO("pgsql:host=localhost;dbname=cvrcek;options='--client_encoding=utf8'", "cvrcek", "h3sl0");
-  $pdo = new PDO("pgsql:host=" . $host . ";dbname=" . $dbname, $user, $pass);
+  // $pdo = new PDO("pgsql:host=" . $host . ";dbname=" . $dbname, $user, $pass);
+  $pdo = new PDO("pgsql:host=" . $host . ";dbname=" . $dbname . ";user=" . $user . ";password=" . $pass);
   $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
   $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
   return $pdo;

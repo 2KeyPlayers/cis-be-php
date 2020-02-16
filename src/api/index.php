@@ -124,6 +124,39 @@ $app->post('/api/uzivatel', function (Request $request, Response $response, arra
     return getErrorResponse($response, ['message' => 'Failed to post Veduci'], 400);
 });
 
+/* JCHO: funkcionalita "Zmena hesla" - POST update-ne hash-ované heslo uživateľa {id} : */
+// $app->post('/api/uzivatel/heslo/{id}', function (Request $request, Response $response, array $args) {
+// $app->post('/api/uzivatel/{id}/zmena-hesla', function (Request $request, Response $response, array $args) {
+//     $id = $args['id'];
+//     $data = getJson($request);
+//     // $id = stripslashes($data->id);
+//     $aktualneHeslo = stripslashes($data->currentPassword);
+//     $noveHeslo = stripslashes($data->newPassword);
+//     $hash = password_hash($noveHeslo, PASSWORD_DEFAULT);
+//     // vyberie heslo pre aktualneho uzivatela:
+//     $db = getDb();
+//     $stmt = $db->prepare("SELECT * FROM uzivatel WHERE id = :id");
+//     $stmt->execute(['id' => $id]);
+//     $result = $stmt->fetch();
+//     // $db = null;
+//     if ($result) {
+//         // porovnava spravnost aktualneho hesla zadaneho vo form-e a loadnuteho z DB:
+//         if (password_verify($aktualneHeslo, $result['heslo'])) {
+//         // ak sedi, zapise/update-ne nove (zahashovane) heslo:
+//         $sql = "UPDATE uzivatel SET heslo = :heslo WHERE id = :id";
+//         $stmt = $db->prepare($sql);
+//         $result = $stmt->execute(['heslo' => $hash, 'id' => $id]);
+//         $db = null;
+//         return getResponse($response, ['ZmenaHeslaUspesna' => 'true']);
+//         } else {
+//             // ak nesedi aktualne heslo zadane vo form-e a loadnute z DB:
+//         return getErrorResponse($response, ['message' => 'zadané špatné aktuálne heslo'], 403);
+//         }
+//     }
+//     // ak vobec nenasiel zaznam o takomto uzivatelovi:
+//     return getErrorResponse($response, ['message' => 'User not found'], 401);
+// });
+    
 /* Veduci */
 
 $app->get('/api/veduci', function (Request $request, Response $response, array $args) {
