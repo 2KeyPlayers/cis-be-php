@@ -8,7 +8,7 @@ use Slim\Exception\HttpNotFoundException;
 use Tuupola\Middleware\HttpBasicAuthentication as HttpBasicAuthentication;
 use Tuupola\Middleware\HttpBasicAuthentication\PdoAuthenticator as PdoAuthenticator;
 // use Slim\Middleware\HttpBasicAuthentication as HttpBasicAuthentication;
-// use Slim\Middleware\HttpBasicAuthentication\PdoAuthenticator;
+// use Slim\Middleware\HttpBasicAuthentication\PdoAuthenticator as PdoAuthenticator;
 
 require __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/helper.php';
@@ -172,7 +172,7 @@ $app->get('/api/kruzok/{id}', function (Request $request, Response $response, ar
     $data = $stmt->fetch();
     
     if ($data) {
-        $stmt = $db->prepare("SELECT u.id, u.pohlavie, u.meno, u.priezvisko, p.poplatok, p.stav FROM ucastnik u INNER JOIN poplatky p ON (p.ucastnik = u.id AND p.kruzok = :id) WHERE :id = ANY(u.kruzky) ORDER BY u.priezvisko, u.meno");
+        $stmt = $db->prepare("SELECT u.id, u.pohlavie, u.meno, u.priezvisko, u.platby, p.poplatok, p.dochadzka FROM ucastnik u INNER JOIN prihlaska p ON (p.ucastnik = u.id AND p.kruzok = :id) WHERE :id = ANY(u.kruzky) ORDER BY u.priezvisko, u.meno");
         $stmt->execute(['id' => $id]);
         $ucastnici = $stmt->fetchAll();
         $data['ucastnici'] = $ucastnici;
@@ -295,7 +295,7 @@ $app->get('/api/ucastnik/{id}', function (Request $request, Response $response, 
 
         if ($data['kruzky'] && $data['kruzky'] != '{}') {
             $idcka = substr($data['kruzky'], 1, strlen($data['kruzky']) - 2);
-            $stmt = $db->prepare("SELECT k.id, k.nazov, p.poplatok, p.stav FROM kruzok k INNER JOIN poplatky p ON (p.ucastnik = :id AND p.kruzok = k.id) WHERE id IN (" . $idcka . ") ORDER BY nazov");
+            $stmt = $db->prepare("SELECT k.id, k.nazov, p.poplatok, p.dochadzka FROM kruzok k INNER JOIN prihlaska p ON (p.ucastnik = :id AND p.kruzok = k.id) WHERE id IN (" . $idcka . ") ORDER BY nazov");
             $stmt->execute(['id' => $id]);
             $kruzky = $stmt->fetchAll();
             $data['kruzky'] = $kruzky;
