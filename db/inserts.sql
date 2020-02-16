@@ -1,6 +1,6 @@
 -- heslo = 'heslo'
-INSERT INTO uzivatel (id, prezyvka, heslo, email, meno, priezvisko) VALUES (1, 'Admin', '$2y$10$JywMck.jlPmvG\/WmjmYoOOXMkQVKigxglcl8gfrepGYZbUEDuHM3q', NULL, 'Janko', 'Hraško');
-INSERT INTO uzivatel (id, prezyvka, heslo, email, meno, priezvisko, titul, veduci) VALUES (2, 'Veduca', '$2y$10$JywMck.jlPmvG\/WmjmYoOOXMkQVKigxglcl8gfrepGYZbUEDuHM3q', NULL, 'Marienka', 'Hrašková', 'Mgr.', TRUE);
+INSERT INTO uzivatel (id, prezyvka, heslo, email, meno, priezvisko) VALUES (1, 'Admin', '$2y$10$NWxDH1ZWL0haPqYmNSBbbuvBYxp99kP5Tm1GzZ5riPMdwnHHeA02C', NULL, 'Janko', 'Hraško');
+INSERT INTO uzivatel (id, prezyvka, heslo, email, meno, priezvisko, titul, veduci) VALUES (2, 'Veduca', '$2y$10$NWxDH1ZWL0haPqYmNSBbbuvBYxp99kP5Tm1GzZ5riPMdwnHHeA02C', NULL, 'Marienka', 'Hrašková', 'Mgr.', TRUE);
 SELECT setval('uzivatel_id_seq', (SELECT MAX(id) FROM uzivatel));
 
 INSERT INTO kruzok (id, nazov, veduci) VALUES (1, 'Aerobkáčik', 2);

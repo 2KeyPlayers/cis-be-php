@@ -13,7 +13,7 @@ DROP TYPE platba;
 CREATE TABLE uzivatel (
   id SERIAL PRIMARY KEY,
   prezyvka TEXT NOT NULL,
-  heslo TEXT,
+  heslo VARCHAR(100),
   email TEXT,
   meno TEXT NOT NULL,
   priezvisko TEXT NOT NULL,
